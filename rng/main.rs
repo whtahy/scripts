@@ -1,16 +1,8 @@
-type T = u64;
-
-const P0: T = 0xa0761d6478bd642f;
+const P0: u64 = 0xa0761d6478bd642f;
 const P1: u128 = 0xe7037ed1a0b428db;
 
 struct Rng {
-    seed: T,
-}
-
-impl Rng {
-    fn new(seed: T) -> Rng {
-        Rng { seed }
-    }
+    seed: u64,
 }
 
 impl Iterator for Rng {
@@ -27,7 +19,7 @@ impl Iterator for Rng {
 }
 
 fn main() {
-    let mut rng = Rng::new(123);
+    let mut rng = Rng { seed: 123 };
 
     let n_lines = 100000;
     let rolls = (5, 40);
