@@ -1,4 +1,5 @@
 use std::io::Write;
+use CompletionStatus::*;
 
 // Rules
 // Game has 10 frames.
@@ -10,19 +11,18 @@ const MAX_PINS: T = 10;
 const FRAME_SIZE: usize = 2;
 const FRAME_SIZE_LAST: usize = FRAME_SIZE + 1;
 
-type T = u32;
-
-struct Game {
-    frames: Vec<Vec<T>>,
-}
-
-use CompletionStatus::*;
 #[derive(PartialEq)]
 enum CompletionStatus {
     NoBonus,
     Strike,
     Spare,
     Incomplete,
+}
+
+type T = u32;
+
+struct Game {
+    frames: Vec<Vec<T>>,
 }
 
 impl Game {
@@ -186,6 +186,17 @@ mod tests {
 
     fn score_str(rolls: &str) -> T {
         mock_str(rolls).total_score()
+    }
+
+    #[test]
+    fn test_txt() {
+        let input = include_str!("./input.txt");
+        let ans = input
+            .lines()
+            .map(score_str)
+            .map(|x| x.to_string() + "\r\n")
+            .collect::<String>();
+        assert!(std::fs::write("./ans.txt", ans).is_ok());
     }
 
     #[test]
