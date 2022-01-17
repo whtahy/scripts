@@ -32,12 +32,6 @@ impl Game {
         }
     }
 
-    fn print(&self) {
-        println!("Frame={}, Score={}", self.frames.len(), self.total_score());
-        println!("Frames: {:?}", self.frames);
-        println!("Scores: {:?}", self.scores());
-    }
-
     fn roll(&mut self, p: &T) -> Result<(), &str> {
         self.valid(p)?;
         let i = self.frames.len() - 1;
@@ -64,8 +58,8 @@ impl Game {
         }
     }
 
-    fn scores(&self) -> Vec<T> {
-        (0..self.frames.len()).flat_map(|i| self.score(i)).collect()
+    fn scores(&self) -> impl Iterator<Item = T> + '_ {
+        (0..self.frames.len()).flat_map(|i| self.score(i))
     }
 
     fn valid<'a>(&self, p: &T) -> Result<(), &'a str> {
@@ -104,10 +98,6 @@ impl Game {
         self.frames[i].iter().sum()
     }
 
-    fn total_score(&self) -> T {
-        self.scores().iter().sum()
-    }
-
     fn undo(&mut self) -> Option<()> {
         if self.frames[0].is_empty() {
             None
@@ -119,37 +109,114 @@ impl Game {
             Some(())
         }
     }
+
+    fn print(&self) {
+        for i in 0..=LAST_FRAME {
+            if i < LAST_FRAME {
+                print!("{}:[{:3}]  ", i + 1, self.frame_to_string(i));
+            } else {
+                println!("{}:[{:5}]", i + 1, self.frame_to_string(i));
+            }
+        }
+        for i in 0..=LAST_FRAME {
+            let score = if self.score(i).is_some() {
+                self.scores().take(i + 1).sum::<T>().to_string()
+            } else {
+                "".to_string()
+            };
+            if i < LAST_FRAME {
+                print!("  [{:>3}]  ", score);
+            } else {
+                println!("   [{:>5}]", score);
+            }
+        }
+    }
+
+    fn frame_to_string(&self, i: usize) -> String {
+        if i >= self.frames.len() || self.frames[i].is_empty() {
+            return "".to_string();
+        }
+
+        let f = &self.frames[i];
+        let parse = |i: usize| {
+            if f[i] == 10 {
+                "X".to_string()
+            } else {
+                f[i].to_string()
+            }
+        };
+        let sum = if f.len() < FRAME_SIZE_LAST {
+            self.sum(i)
+        } else {
+            f[0] + f[1]
+        };
+
+        if i == LAST_FRAME {
+            match (f.len(), f[0], sum) {
+                (3, MAX_PINS, _) => format!("X,{},{}", parse(1), parse(2)),
+                (2, MAX_PINS, _) => format!("X,{},", parse(1)),
+                (1, MAX_PINS, _) => "X,".to_string(),
+                (3, _, MAX_PINS) => format!("{},/,{}", parse(0), parse(2)),
+                (2, _, MAX_PINS) => format!("{},/,", parse(0)),
+                (3, _, _) => format!("{},{},{}", parse(0), parse(1), parse(2)),
+                (2, _, _) => format!("{},{}", parse(0), parse(1)),
+                (1, _, _) => format!("{},", parse(0)),
+                _ => unreachable!(),
+            }
+        } else {
+            match (f.len(), sum) {
+                (1, MAX_PINS) => " X ".to_string(),
+                (1, _) => format!("{},", parse(0)),
+                (2, MAX_PINS) => format!("{},/", parse(0)),
+                (2, _) => format!("{},{}", parse(0), parse(1)),
+                _ => unreachable!(),
+            }
+        }
+    }
 }
 
 fn main() {
     std::process::Command::new("clear").status().unwrap();
-
     let mut game = Game::new();
-    game.print();
+    let mut refresh = true;
 
     loop {
+        if refresh {
+            game.print();
+        }
         print!(" > ");
         std::io::stdout().flush().unwrap();
 
         let input = user_input();
         match input.as_str() {
-            "exit" => break,
-            "restart" => game = Game::new(),
+            "exit" => {
+                clear();
+                break;
+            }
+            "restart" => {
+                game = Game::new();
+                clear();
+                refresh = true;
+            }
             "undo" => {
                 game.undo();
+                println!();
+                refresh = true;
             }
             "clear" => {
-                std::process::Command::new("clear").status().unwrap();
+                clear();
+                refresh = true;
             }
             _ => {
-                if let Ok(x) = input.parse() {
-                    if let Err(s) = game.roll(&x) {
-                        println!("{}", s);
-                    }
-                }
+                let err = match input.parse().map(|x| game.roll(&x)) {
+                    Err(_) => "Invalid input!",
+                    Ok(Err(s)) => s,
+                    _ => "",
+                };
+                println!("{err}");
+                refresh = err.is_empty();
             }
         }
-        game.print();
     }
 }
 
@@ -157,6 +224,10 @@ fn user_input() -> String {
     let mut buffer = String::new();
     std::io::stdin().read_line(&mut buffer).unwrap();
     buffer.trim().to_string()
+}
+
+fn clear() {
+    std::process::Command::new("clear").status().unwrap();
 }
 
 #[cfg(test)]
@@ -172,7 +243,7 @@ mod tests {
     }
 
     fn score(rolls: &[T]) -> T {
-        mock(rolls).total_score()
+        mock(rolls).scores().sum()
     }
 
     fn mock_str(rolls: &str) -> Game {
@@ -185,19 +256,27 @@ mod tests {
     }
 
     fn score_str(rolls: &str) -> T {
-        mock_str(rolls).total_score()
+        mock_str(rolls).scores().sum()
     }
 
-    #[test]
-    fn test_txt() {
-        let input = include_str!("./input.txt");
-        let ans = input
-            .lines()
-            .map(score_str)
-            .map(|x| x.to_string() + "\r\n")
-            .collect::<String>();
-        assert!(std::fs::write("./ans.txt", ans).is_ok());
+    fn pad(last_frame: &[T]) -> Game {
+        let mut g = mock(&[0; LAST_FRAME * 2]);
+        for p in last_frame {
+            let _ = g.roll(p);
+        }
+        g
     }
+
+    // #[test]
+    // fn test_txt() {
+    //     let input = include_str!("./input.txt");
+    //     let ans = input
+    //         .lines()
+    //         .map(score_str)
+    //         .map(|x| x.to_string() + "\r\n")
+    //         .collect::<String>();
+    //     assert!(std::fs::write("./ans.txt", ans).is_ok());
+    // }
 
     #[test]
     fn test_streaks() {
@@ -257,35 +336,33 @@ mod tests {
 
     #[test]
     fn test_last_frame() {
-        fn f(frame: Vec<T>) -> Vec<T> {
-            std::iter::repeat(0).take(9 * 2).chain(frame).collect()
-        }
+        let f = |x: &[T]| pad(x).scores().sum::<T>();
 
         // last frame score = sum(frame)
-        assert_eq!(20, score(&f(vec![10, 6, 4])));
-        assert_eq!(24, score(&f(vec![10, 10, 4])));
-        assert_eq!(15, score(&f(vec![5, 5, 5])));
-        assert_eq!(15, score(&f(vec![1, 9, 5])));
-        assert_eq!(15, score(&f(vec![10, 0, 5])));
-        assert_eq!(20, score(&f(vec![5, 5, 10])));
+        assert_eq!(20, f(&[10, 6, 4]));
+        assert_eq!(15, f(&[5, 5, 5]));
+        assert_eq!(15, f(&[1, 9, 5]));
+        assert_eq!(15, f(&[10, 0, 5]));
+        assert_eq!(24, f(&[10, 10, 4]));
+        assert_eq!(20, f(&[5, 5, 10]));
 
         // extra rolls after spare/strike
-        assert_eq!(20, score(&f(vec![10, 6, 4, 1])));
-        assert_eq!(24, score(&f(vec![10, 10, 4, 1])));
-        assert_eq!(15, score(&f(vec![5, 5, 5, 1])));
-        assert_eq!(15, score(&f(vec![1, 9, 5, 1])));
-        assert_eq!(15, score(&f(vec![10, 0, 5, 1])));
-        assert_eq!(20, score(&f(vec![5, 5, 10, 1])));
+        assert_eq!(20, f(&[10, 6, 4, 1]));
+        assert_eq!(24, f(&[10, 10, 4, 1]));
+        assert_eq!(15, f(&[5, 5, 5, 1]));
+        assert_eq!(15, f(&[1, 9, 5, 1]));
+        assert_eq!(15, f(&[10, 0, 5, 1]));
+        assert_eq!(20, f(&[5, 5, 10, 1]));
 
         // extra rolls after open frame
-        assert_eq!(9, score(&f(vec![4, 5, 5, 1])));
-        assert_eq!(5, score(&f(vec![5, 0, 5, 1])));
-        assert_eq!(0, score(&f(vec![0, 0, 5, 1])));
+        assert_eq!(9, f(&[4, 5, 5, 1]));
+        assert_eq!(5, f(&[5, 0, 5, 1]));
+        assert_eq!(0, f(&[0, 0, 5, 1]));
 
         // invalid inputs
-        assert_eq!(1, score(&f(vec![1, 10, 0, 1, 1])));
-        assert_eq!(2, score(&f(vec![1, 10, 1, 1, 1])));
-        assert_eq!(11, score(&f(vec![5, 10, 5, 1, 1, 1])));
+        assert_eq!(1, f(&[1, 10, 0, 1, 1]));
+        assert_eq!(2, f(&[1, 10, 1, 1, 1]));
+        assert_eq!(11, f(&[5, 10, 5, 1, 1, 1]));
     }
 
     #[test]
@@ -300,7 +377,7 @@ mod tests {
             if b.roll(&p).is_ok() {
                 b.undo();
             };
-            assert_eq!(a.total_score(), b.total_score());
+            assert_eq!(a.scores().sum::<T>(), b.scores().sum());
         }
 
         for p in 0..=11 {
@@ -310,5 +387,72 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_normal_frame_to_string() {
+        let f = |x: &[T]| mock(x).frame_to_string(0);
+
+        // strike
+        assert_eq!(" X ".to_string(), f(&[10, 0]));
+
+        // spare
+        assert_eq!("0,/".to_string(), f(&[0, 10]));
+        assert_eq!("4,/".to_string(), f(&[4, 6]));
+        assert_eq!("5,/".to_string(), f(&[5, 5]));
+        assert_eq!("6,/".to_string(), f(&[6, 4]));
+
+        // open frame
+        assert_eq!("".to_string(), f(&[]));
+        assert_eq!("0,".to_string(), f(&[0]));
+        assert_eq!("1,".to_string(), f(&[1]));
+        assert_eq!("1,2".to_string(), f(&[1, 2]));
+        assert_eq!("0,0".to_string(), f(&[0, 0]));
+        assert_eq!("0,4".to_string(), f(&[0, 4]));
+        assert_eq!("4,0".to_string(), f(&[4, 0]));
+    }
+
+    #[test]
+    fn test_last_frame_to_string() {
+        let f = |x: &[T]| pad(x).frame_to_string(LAST_FRAME);
+
+        // 1 roll
+        assert_eq!("1,".to_string(), f(&[1]));
+        assert_eq!("2,".to_string(), f(&[2]));
+        assert_eq!("3,".to_string(), f(&[3]));
+        assert_eq!("4,".to_string(), f(&[4]));
+        assert_eq!("5,".to_string(), f(&[5]));
+        assert_eq!("6,".to_string(), f(&[6]));
+        assert_eq!("7,".to_string(), f(&[7]));
+        assert_eq!("8,".to_string(), f(&[8]));
+        assert_eq!("9,".to_string(), f(&[9]));
+        assert_eq!("X,".to_string(), f(&[10]));
+
+        // 2 rolls
+        assert_eq!("0,0".to_string(), f(&[0, 0]));
+        assert_eq!("9,0".to_string(), f(&[9, 0]));
+        assert_eq!("9,/,".to_string(), f(&[9, 1]));
+        assert_eq!("1,/,".to_string(), f(&[1, 9]));
+        assert_eq!("X,0,".to_string(), f(&[10, 0]));
+        assert_eq!("X,5,".to_string(), f(&[10, 5]));
+        assert_eq!("X,X,".to_string(), f(&[10, 10]));
+
+        // 3 rolls with strikes
+        assert_eq!("X,0,0".to_string(), f(&[10, 0, 0]));
+        assert_eq!("0,/,0".to_string(), f(&[0, 10, 0]));
+        assert_eq!("0,0".to_string(), f(&[0, 0, 0]));
+        assert_eq!("0,0".to_string(), f(&[0, 0, 10]));
+        assert_eq!("X,X,0".to_string(), f(&[10, 10, 0]));
+        assert_eq!("0,/,X".to_string(), f(&[0, 10, 10]));
+        assert_eq!("X,X,X".to_string(), f(&[10, 10, 10]));
+
+        // 3 rolls with spares
+        assert_eq!("5,/,5".to_string(), f(&[5, 5, 5]));
+        assert_eq!("5,/,0".to_string(), f(&[5, 5, 0]));
+        assert_eq!("5,0".to_string(), f(&[5, 0, 0]));
+        assert_eq!("4,4".to_string(), f(&[4, 4, 4]));
+        assert_eq!("4,/,4".to_string(), f(&[4, 6, 4]));
+        assert_eq!("6,/,X".to_string(), f(&[6, 4, 10]));
+        assert_eq!("4,/,X".to_string(), f(&[4, 6, 10]));
     }
 }
