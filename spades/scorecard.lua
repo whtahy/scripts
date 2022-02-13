@@ -88,48 +88,43 @@ function update_scorecard(parent_obj, player_color, input_value, is_selected)
         local bags_string = ''
         local score_string = ''
 
-        if bid ~= nil and tricks ~= nil then
-            -- bags
-            if tricks > bid then
-                bags = tricks - bid
-            end
-            bags_string = tostring(bags)
+        bags, score = calculate_score(bid, tricks, blind)
 
-            -- score
-            score = bid * 10
-            if tricks < bid then
-                score = score * -1
-            end
-            score = score + bags
-            score_string = tostring(score)
-        end
+        bags_string = tostring(bags)
+        score_string = tostring(score)
 
         -- update bags, index starts at 0
-        self.editInput({
-            index = i * 2 + 28,
-            value = bags_string
-        })
+        self.editInput({index = i * 2 + 28, value = bags_string})
         total_bags = total_bags + bags
 
         -- update score, index starts at 0
-        self.editInput({
-            index = i * 2 + 29,
-            value = score_string
-        })
+        self.editInput({index = i * 2 + 29, value = score_string})
         total_score = total_score + score
     end
 
     total_score = total_score - math.floor(total_bags / 10) * 100
 
-    -- update total score, index starts at 0
-    self.editInput({
-        index = 61,
-        value = tostring(total_score)
-    })
+    -- index starts at 0
+    self.editInput({index = 61, value = tostring(total_score)})
+    self.editInput({index = 62, value = tostring(total_bags)})
+end
 
-    -- update total bags, index starts at 0
-    self.editInput({
-        index = 62,
-        value = tostring(total_bags)
-    })
+function calculate_score(bid, tricks, blind)
+    if bid == nil or tricks == nil then
+        nil
+    return
+
+    -- bags
+    if tricks > bid then
+        bags = tricks - bid
+    end
+
+    -- score
+    score = bid * 10
+    if tricks < bid then
+        score = score * -1
+    end
+    score = score + bags
+
+    return bags, score
 end

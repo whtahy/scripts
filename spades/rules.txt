@@ -9,9 +9,9 @@ can't start spades until spades broken
 Scoring
 under bid, either
     - 0 pts
-    - negative 10 times bid
-10 pts per trick bid
+    - negative bid value
++10 pts per trick bid
 +1 pt/bag over bid
 10 bags -> -100 pts
-nil bid -> 100 pts
-blind nil -> 200 pts
+0 bid ('nil') -> 100 pts
+blind 0 bid ('blind nil') -> 200 pts
