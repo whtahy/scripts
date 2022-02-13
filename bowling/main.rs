@@ -45,7 +45,6 @@ impl Game {
     fn score(&self, i: usize) -> Option<T> {
         self.frames.get(i)?;
         let sum = self.sum(i);
-
         match self.completion_status(i) {
             Incomplete => None,
             Strike => {
@@ -69,7 +68,6 @@ impl Game {
         } else {
             MAX_PINS - self.frames[i].last().unwrap()
         };
-
         if i == LAST_FRAME && self.completion_status(i) != Incomplete {
             Err("Game Over!")
         } else if p > &remaining_pins {
@@ -82,7 +80,6 @@ impl Game {
     fn completion_status(&self, i: usize) -> CompletionStatus {
         let len = self.frames[i].len();
         let sum = self.sum(i);
-
         if len == FRAME_SIZE_LAST || (len == FRAME_SIZE && sum < MAX_PINS) {
             NoBonus
         } else if i < LAST_FRAME && len == 1 && sum == MAX_PINS {
@@ -136,7 +133,6 @@ impl Game {
         if i >= self.frames.len() || self.frames[i].is_empty() {
             return "".to_string();
         }
-
         let f = &self.frames[i];
         let parse = |i: usize| {
             if f[i] == 10 {
@@ -150,7 +146,6 @@ impl Game {
         } else {
             f[0] + f[1]
         };
-
         if i == LAST_FRAME {
             match (f.len(), f[0], sum) {
                 (3, MAX_PINS, _) => format!("X,{},{}", parse(1), parse(2)),
