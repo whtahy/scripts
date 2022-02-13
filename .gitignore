@@ -2,3 +2,5 @@
 !cargo.toml
 !main.rs
 !lib.rs
+
+!spades/*.*
