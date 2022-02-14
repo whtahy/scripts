@@ -145,15 +145,16 @@ function calculate_bags_and_score(bid, tricks)
     -- invalid inputs -> early return
     if bid ~= 'b' and bid ~= 'n' and (bid < 0 or bid > 13) then
         print('Error: bid = '..bid..' is out of range.')
-        print("Fix: use 1 thru 13, or 'n' for nil, 'b' for blind nil")
+        print('Fix 1: use 1 thru 13')
+        print("Fix 2: or use 'A+B' format with 'n' for nil, 'b' for blind nil.")
         return nil
     elseif tricks < 0 or tricks > 13 then
         print('Error: tricks = '..tricks..' is out of range.')
-        print('Fix: use 0 thru 13')
+        print("Fix: use 0 thru 13, with 'A+B' format for nil or blind nil.")
         return nil
     elseif bid == 0 then
         print('Error: bid = 0 is invalid.')
-        print("Fix: use 'n' for nil and 'b' for blind nil, instead of '0'.")
+        print("Fix: use 'A+B' format with 'n' for nil, 'b' for blind nil, instead of '0'.")
         return nil
     end
 
