@@ -7,26 +7,26 @@ function onLoad()
 
     reset_button = getObjectFromGUID(reset_button_id)
     reset_button.createButton({
-        click_function = "reset",
-        label          = "Reset",
-        position       = {0, 0.5, 0},
-        width          = 800,
-        height         = 400,
-        font_size      = 340,
-        color          = {0.5, 0.5, 0.5},
-        font_color     = {1, 1, 1}
+        click_function  = 'reset',
+        label           = 'Reset',
+        position        = {0, 0.5, 0},
+        width           = 800,
+        height          = 400,
+        font_size       = 340,
+        color           = {0.5, 0.5, 0.5},
+        font_color      = {1, 1, 1}
     })
 
     debug_button = getObjectFromGUID(debug_button_id)
     debug_button.createButton({
-        click_function = "debug",
-        label          = "Debug!",
-        position       = {0, 0.5, 0},
-        width          = 1100,
-        height         = 400,
-        font_size      = 340,
-        color          = {0.5, 0.5, 0.5},
-        font_color     = {1, 1, 1}
+        click_function  = 'debug',
+        label           = 'Debug!',
+        position        = {0, 0.5, 0},
+        width           = 1100,
+        height          = 400,
+        font_size       = 340,
+        color           = {0.5, 0.5, 0.5},
+        font_color      = {1, 1, 1}
     })
 end
 
