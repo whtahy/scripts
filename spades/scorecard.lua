@@ -13,11 +13,42 @@ spacing_length = 0.1024
 offset_width = 0
 spacing_width = 0.171
 
+save_data_table = {}
+
 function onSave()
     return self.script_state
 end
 
 function onLoad(script_state_json)
+    create_all_textboxes()
+
+    self.createButton({
+        function_owner  = self,
+        click_function  = 'reset',
+        label           = 'Reset!',
+        position        = {0.4, 0.1, -1.05},
+        scale           = {1/scale_width, 1, 1/scale_length},
+        width           = 84 * scale_width,
+        height          = 32 * scale_length,
+        font_size       = 24 * scale_width,
+        color           = {1, 0.5, 0.5},
+        font_color      = {1, 1, 1}
+    })
+
+    load_save_data(script_state_json)
+end
+
+function load_save_data(script_state_json)
+    local script_state = JSON.decode(script_state_json)
+    for i = 1, 30 do
+        -- editInput index starts at 0
+        -- script_state index starts at 1
+        self.editInput({index = i - 1, value = script_state[i]})
+    end
+    update_scorecard()
+end
+
+function create_all_textboxes()
     -- grid = 15 rows by 4 columns
     -- 1 2 31 32
     -- 3 4 33 34
@@ -52,16 +83,6 @@ function onLoad(script_state_json)
 
     -- total bags
     create_textbox(0.33, -0.79, 37.5)
-
-    -- restore bids and tricks
-    local script_state = JSON.decode(script_state_json)
-    for i = 1, 30 do
-        -- editInput index starts at 0
-        -- script_state index starts at 1
-        self.editInput({index = i - 1, value = script_state[i]})
-    end
-    save_data_table = {}
-    update_scorecard()
 end
 
 function create_textbox(x, z, font_size, width)
@@ -69,18 +90,18 @@ function create_textbox(x, z, font_size, width)
     local width = (width or default_textbox_width) * scale_width
 
     self.createInput({
-        function_owner = self,
-        input_function = 'update_scorecard',
-        label = '',
-        position = {x, 0.101, z},
-        scale = {1/scale_width, 1, 1/scale_length},
-        font_size = font_size,
-        font_color = {0/255, 60/255, 110/255, 150},
-        height = font_size + 24,
-        width = width,
-        color = {1, 1, 1, 0},
-        alignment = 3, -- center
-        tab = 2, -- next input
+        function_owner  = self,
+        input_function  = 'update_scorecard',
+        label           = '',
+        position        = {x, 0.101, z},
+        scale           = {1/scale_width, 1, 1/scale_length},
+        font_size       = font_size,
+        font_color      = {0/255, 60/255, 110/255, 150}, -- opacity: 0 to 255
+        height          = font_size + 24,
+        width           = width,
+        color           = {1, 1, 1, 0}, -- opacity: 0 to 1
+        alignment       = 3, -- center
+        tab             = 2, -- next input
     })
 end
 
@@ -217,4 +238,9 @@ function calculate_bags_and_score(bid, tricks)
     end
 
     return bags, score + bags
+end
+
+function reset()
+    save_data_table = {}
+    load_save_data(JSON.encode({}))
 end
