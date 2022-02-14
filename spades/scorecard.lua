@@ -20,10 +20,10 @@ function onLoad()
     -- 5 6 35 36
     -- . .  .  .
 
-    -- columns 1 and 2, for navigation using the tab keyboard key
+    -- columns 1 and 2, for keyboard tab navigation
     for i = -5, 9 do
         for j = -1, 0 do
-            textbox(
+            create_textbox(
                 offset_width + j * spacing_width,
                 offset_length + i * spacing_length
             )
@@ -33,7 +33,7 @@ function onLoad()
     -- columns 3 and 4
     for i = -5, 9 do
         for j = 1, 2 do
-            textbox(
+            create_textbox(
                 offset_width + j * spacing_width,
                 offset_length + i * spacing_length
             )
@@ -41,16 +41,16 @@ function onLoad()
     end
 
     -- team name
-    textbox(-0.035, -0.84, 60, 90)
+    create_textbox(-0.035, -0.84, 60, 90)
 
     -- total score
-    textbox(0.33, -0.893, 37.5, 85)
+    create_textbox(0.33, -0.893, 37.5, 85)
 
     -- total bags
-    textbox(0.33, -0.79, 37.5)
+    create_textbox(0.33, -0.79, 37.5)
 end
 
-function textbox(x, z, font_size, width)
+function create_textbox(x, z, font_size, width)
     local font_size = (font_size or default_font_size) * scale_width
     local width = (width or default_textbox_width) * scale_width
 
@@ -85,9 +85,9 @@ function update_scorecard(parent_obj, player_color, input_value, is_selected)
         local bags_string, score_string = '', ''
 
         -- nil
-        if (bid_string:find('^[nb]%+%d+$') -- nil + bid
-                or bid_string:find('^%d+%+[nb]$') -- bid + nil
-                or bid_string:find('^[nb]%+[nb]$')) -- nil + nil
+        if (bid_string:find('^[nb]%+%d+$') -- nil+bid
+                or bid_string:find('^%d+%+[nb]$') -- bid+nil
+                or bid_string:find('^[nb]%+[nb]$')) -- nil+nil
             and tricks_string:find('^%d+%+%d+$') then
             local _, _, bid_a, bid_b =
                 bid_string:find('^(.+)%+(.+)$')
@@ -160,7 +160,7 @@ function calculate_bags_and_score(bid, tricks)
 
     local score = nil
 
-    -- successful bid
+    -- bid value
     if bid == 'n' then
         score = 100
         bid = 0
