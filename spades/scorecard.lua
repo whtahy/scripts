@@ -13,7 +13,11 @@ spacing_length = 0.1024
 offset_width = 0
 spacing_width = 0.171
 
-function onLoad()
+function onSave()
+    return self.script_state
+end
+
+function onLoad(script_state_json)
     -- grid = 15 rows by 4 columns
     -- 1 2 31 32
     -- 3 4 33 34
@@ -48,6 +52,16 @@ function onLoad()
 
     -- total bags
     create_textbox(0.33, -0.79, 37.5)
+
+    -- restore bids and tricks
+    local script_state = JSON.decode(script_state_json)
+    for i = 1, 30 do
+        -- editInput index starts at 0
+        -- script_state index starts at 1
+        self.editInput({index = i - 1, value = script_state[i]})
+    end
+    save_data_table = {}
+    update_scorecard()
 end
 
 function create_textbox(x, z, font_size, width)
@@ -79,15 +93,23 @@ function update_scorecard(parent_obj, player_color, input_value, is_selected)
 
     -- calculate bags and scores
     for i = 1, 15 do
+        -- getInputs() index starts at 1
         local bid_string = self.getInputs()[i * 2 - 1].value
         local tricks_string = self.getInputs()[i * 2].value
+
+        -- save_data_table index starts at 1
+        save_data_table[i * 2 - 1] = bid_string
+        save_data_table[i * 2] = tricks_string
+
         local bags, score = nil
         local bags_string, score_string = '', ''
 
-        -- nil
-        if (bid_string:find('^[nb]%+%d+$') -- nil+bid
-                or bid_string:find('^%d+%+[nb]$') -- bid+nil
-                or bid_string:find('^[nb]%+[nb]$')) -- nil+nil
+        -- nil scoring
+        -- bid: nil+bid, bid+nil, nil+nil
+        -- tricks: N+N
+        if (bid_string:find('^[nb]%+%d+$')
+                or bid_string:find('^%d+%+[nb]$')
+                or bid_string:find('^[nb]%+[nb]$'))
             and tricks_string:find('^%d+%+%d+$') then
             local _, _, bid_a, bid_b =
                 bid_string:find('^(.+)%+(.+)$')
@@ -97,7 +119,7 @@ function update_scorecard(parent_obj, player_color, input_value, is_selected)
             local bags_b, score_b = calculate_bags_and_score(bid_b, tricks_b)
             bags = bags_a + bags_b
             score = score_a + score_b
-        -- standard
+        -- standard scoring
         elseif bid_string:find('^%d+$')
             and tricks_string:find('^%d+$') then
             bags, score = calculate_bags_and_score(bid_string, tricks_string)
@@ -110,6 +132,7 @@ function update_scorecard(parent_obj, player_color, input_value, is_selected)
         -- else empty string
         end
 
+        -- calculate bags and score
         if bags and score then
             bags_string = tostring(bags)
             score_string = tostring(score)
@@ -121,16 +144,26 @@ function update_scorecard(parent_obj, player_color, input_value, is_selected)
             total_score = total_score + score
         end
 
+        -- update bags and score
+        -- editInput index starts at 0
         self.editInput({index = i * 2 + 28, value = bags_string})
         self.editInput({index = i * 2 + 29, value = score_string})
     end
 
+    -- calculate total score
     if total_score ~= nil and total_bags ~= nil then
         total_score = total_score - math.floor(total_bags / 10) * 100
-        -- index starts at 0
-        self.editInput({index = 61, value = tostring(total_score)})
-        self.editInput({index = 62, value = tostring(total_bags)})
+    else
+        total_score, total_bags = '', ''
     end
+
+    -- update total bags and total score
+    -- editInput index starts at 0
+    self.editInput({index = 61, value = tostring(total_score)})
+    self.editInput({index = 62, value = tostring(total_bags)})
+
+    -- update save data
+    self.script_state = JSON.encode(save_data_table)
 end
 
 function calculate_bags_and_score(bid, tricks)
