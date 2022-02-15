@@ -22,15 +22,16 @@ end
 function onLoad(script_state_json)
     create_all_textboxes()
 
+    -- reset button
     self.createButton({
         function_owner  = self,
         click_function  = 'reset',
         label           = 'Reset!',
-        position        = {0.4, 0.1, -1.05},
+        position        = {0.37, 0.1, -1.06},
         scale           = {1/scale_width, 1, 1/scale_length},
-        width           = 84 * scale_width,
+        width           = 120 * scale_width,
         height          = 32 * scale_length,
-        font_size       = 24 * scale_width,
+        font_size       = 30 * scale_width,
         color           = {1, 0.5, 0.5},
         font_color      = {1, 1, 1}
     })
@@ -96,7 +97,7 @@ function create_textbox(x, z, font_size, width)
         position        = {x, 0.101, z},
         scale           = {1/scale_width, 1, 1/scale_length},
         font_size       = font_size,
-        font_color      = {0/255, 60/255, 110/255, 150}, -- opacity: 0 to 255
+        font_color      = {0/255, 60/255, 130/255, 100}, -- opacity: 0 to 255
         height          = font_size + 24,
         width           = width,
         color           = {1, 1, 1, 0}, -- opacity: 0 to 1
