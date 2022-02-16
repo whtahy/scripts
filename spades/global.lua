@@ -39,7 +39,7 @@ end
 
 function reset()
     local players = Player.getPlayers()
-    local exist_hand = false
+    local exist_player = false
 
     -- failsafe: check hand size
     for _, p in ipairs(players) do
@@ -49,12 +49,12 @@ function reset()
             print('Hand is not empty!')
             return nil
         end
-        exist_hand = true
+        exist_player = true
         ::continue::
     end
 
     -- failsafe: check hand
-    if not exist_hand then
+    if not exist_player then
         print('No hand zone!')
         return nil
     end
@@ -68,12 +68,7 @@ function reset()
             z = 180
         })
         c.setPositionSmooth(deck_zone.getPosition())
-        Wait.time(
-            function()
-                c.use_hands = true
-            end,
-            0.5
-        )
+        Wait.time(function() c.use_hands = true end, 0.5)
     end
 
     local shuffle = false -- synchronize
@@ -82,7 +77,7 @@ function reset()
     Wait.condition(
         function()
             get_deck().shuffle()
-            shuffle = true
+            Wait.time(function() shuffle = true end, 0.7)
         end,
         -- wait until deck is ready
         function()
@@ -95,7 +90,7 @@ function reset()
     -- deal cards
     Wait.condition(
         function()
-            Wait.time(deal_hands, 0.6)
+            deal_hands()
             new_hand = true
         end,
         -- wait until deck is shuffled
