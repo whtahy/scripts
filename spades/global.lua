@@ -3,6 +3,13 @@ reset_button_id = '0e20c2'
 debug_button_id = 'e94e7d'
 
 function onLoad()
+    for _, obj in ipairs(getAllObjects()) do
+        if obj.hasTag('Static') then
+            obj.interactable = false
+            obj.drag_selectable = false
+        end
+    end
+
     deck_zone = getObjectFromGUID(deck_zone_id)
 
     reset_button = getObjectFromGUID(reset_button_id)
