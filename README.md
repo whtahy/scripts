@@ -10,3 +10,4 @@
 2. `bowling` Interactive cli.
 3. `ninja` Fetch data from `poe.ninja` for Path of Exile loot filters.
 4. `rng` Based on wyhash: https://github.com/wangyi-fudan/wyhash
+5. `spades` Tabletop Simulator scripts
