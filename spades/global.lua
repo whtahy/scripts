@@ -4,7 +4,7 @@ debug_button_id = 'e94e7d'
 
 function onLoad()
     for _, obj in ipairs(getAllObjects()) do
-        if obj.hasTag('Static') then
+        if obj.hasTag('Static') or obj.hasTag('Table') then
             obj.interactable = false
             obj.drag_selectable = false
         end

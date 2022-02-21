@@ -1,16 +1,23 @@
-radius = 9
+radius = 7.5
 
 -- hand zones
-north_hand_id = '7537a0'
-south_hand_id = '5d4440'
-east_hand_id = '4619f8'
-west_hand_id = 'e00494'
+north_hand_id = '4ff856'
+south_hand_id = 'ba2279'
+east_hand_id = '5ade02'
+west_hand_id = '5dcd91'
 
 -- center card zones
 north_id = '2bf3ba'
 south_id = 'e7c419'
 east_id = '5ce4f8'
 west_id = '6b1e5c'
+
+function round(x)
+    local y = math.floor(math.abs(x) + 0.5)
+    if x < 0 then return -y
+    else return y
+    end
+end
 
 function onObjectDestroy(object)
     return true
@@ -27,7 +34,10 @@ function onObjectLeaveZone(zone, object)
 
     Wait.condition(
         function()
-            if x == 0 and z == 0 and #get_cards(zone) == 12 then
+            if round(x) == 0
+                and round(z) == 0
+                and #get_cards(zone) == 12 then
+
                 local zone_id = zone.getGUID()
                 local new_x, new_z = x, z
                 if zone_id == north_hand_id then
@@ -46,16 +56,6 @@ function onObjectLeaveZone(zone, object)
             return onObjectDestroy(object) or object.resting
         end
     )
-end
-
-function get_cards(zone)
-    local cards = {}
-    for _, obj in ipairs(zone.getObjects()) do
-        if obj.tag == 'Card' then
-            table.insert(cards, obj)
-        end
-    end
-    return cards
 end
 
 function onObjectEnterZone(zone, object)
@@ -80,6 +80,16 @@ function onObjectEnterZone(zone, object)
     )
 end
 
+function get_cards(zone)
+    local cards = {}
+    for _, obj in ipairs(zone.getObjects()) do
+        if obj.tag == 'Card' then
+            table.insert(cards, obj)
+        end
+    end
+    return cards
+end
+
 function is_round_over()
     -- all hands are empty
     for _, p in ipairs(Player.getPlayers()) do
@@ -98,15 +108,15 @@ end
 
 -- check whether zone contains a card
 function is_occupied(zone_guid)
-    local obj = getObjectFromGUID(zone_guid).getObjects()[1]
-    return obj and obj.tag == 'Card' and not obj.isSmoothMoving()
+    local cards = get_cards(getObjectFromGUID(zone_guid));
+    return #cards == 1 and not cards[1].isSmoothMoving()
 end
 
 -- clockwise
 function rotate(x, z)
-    if x == 0 and math.abs(z) == radius then
+    if round(x) == 0 and math.abs(round(z*10)) == radius*10 then
         return z, x
-    elseif math.abs(x) == radius and z == 0 then
+    elseif math.abs(round(x*10)) == radius*10 and round(z) == 0 then
         return z, -x
     else
         return x, z
