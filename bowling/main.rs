@@ -171,7 +171,11 @@ impl Game {
 }
 
 fn main() {
-    std::process::Command::new("clear").status().unwrap();
+    fn clear() {
+        std::process::Command::new("clear").status().unwrap();
+    }
+
+    clear();
     let mut game = Game::new();
     let mut refresh = true;
 
@@ -219,10 +223,6 @@ fn user_input() -> String {
     let mut buffer = String::new();
     std::io::stdin().read_line(&mut buffer).unwrap();
     buffer.trim().to_string()
-}
-
-fn clear() {
-    std::process::Command::new("clear").status().unwrap();
 }
 
 #[cfg(test)]
