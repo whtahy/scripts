@@ -1,29 +1,28 @@
-use std::env;
 use std::path::Path;
 use std::process::Command;
-
-fn arg(i: usize) -> String {
-    env::args().nth(i).unwrap()
-}
-
-// use env variable ADVENT_OF_CODE_FLAGS
-// to get download path (instead of hardcode)
-// create env variable helper?
-
-// add --crlf option
+use std::{env, fs};
 
 fn main() {
-    let year = arg(1);
-    let day = arg(2);
-    let cookie = env::var("aoc_session_cookie").unwrap();
-
-    let path = format!("c:/git/advent_of_code/input/{0}/day{1}.txt", year, day);
-
-    if !Path::new(&path).exists() {
-        let url = format!("https://adventofcode.com/{0}/day/{1}/input", year, day);
-        let curl = format!("curl -b session={0} {1} > {2}", cookie, url, path);
+    let args = env::args().collect::<Vec<_>>();
+    if let [_, year, day] = &args[..] {
+        let path = format!("c:/git/advent_of_code/aoc_{year}/day{day}.txt");
+        if Path::new(&path).exists() {
+            return println!("File already exists: {path}");
+        }
+        let cookie = env::var("aoc_session_cookie").unwrap();
+        let url = format!("https://adventofcode.com/{year}/day/{day}/input");
+        let curl = format!("curl -b session={cookie} {url} > {path}");
         Command::new("bash").arg("-c").arg(curl).output().unwrap();
-    } else {
-        println!("File already exists.")
+        if Path::new(&path).exists() {
+            let crlf = fs::read_to_string(&path)
+                .unwrap()
+                .replace("\r\n", "\n")
+                .replace('\n', "\r\n");
+            fs::write(&path, crlf).unwrap();
+            return println!("Download success: {path}");
+        } else {
+            return println!("Download fail: {path}");
+        }
     }
+    println!("Usage: aoc <year> <day>")
 }
