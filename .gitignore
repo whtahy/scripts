@@ -1,4 +1,4 @@
 *.*
-!cargo.toml
-!main.rs
-!lib.rs
+!*.txt
+!*.toml
+!*.rs
