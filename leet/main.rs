@@ -44,7 +44,6 @@ pub mod mars {
                     best = val;
                 }
             }
-
             for coord in new_coords {
                 let mut new_city = city.clone();
                 new_city.insert(coord);
@@ -74,7 +73,6 @@ pub mod mars {
         let best_value = city_value(best_city);
 
         // print input and soln
-        println!("val = {best_value}; N = {} cities", cities.len());
         let mut pretty_print = Vec::new();
         for (i, row) in v.iter().enumerate() {
             pretty_print.push(String::new());
@@ -88,6 +86,7 @@ pub mod mars {
                 }
             }
         }
+        println!("val = {best_value}; N = {} cities", cities.len());
         println!("{}", pretty_print.join("\n"));
 
         // return value
