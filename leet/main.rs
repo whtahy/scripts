@@ -1,4 +1,22 @@
-fn main() {}
+use crate::mars::*;
+
+fn main() {
+    let grid = "
+        90000
+        00000
+        00000
+        00000
+        22222";
+    mars(5, grid);
+
+    let grid = "
+        20000
+        20000
+        20000
+        20000
+        20009";
+    mars(5, grid);
+}
 
 pub mod mars {
     use std::collections::{BTreeSet, HashMap, HashSet};
