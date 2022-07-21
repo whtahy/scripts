@@ -1,35 +1,25 @@
-use crate::mars::*;
-
 fn main() {
-    let grid = "
-        90000
+    // "0"
+    // "1"
+    // "2"
+    // "000"
+    // "111"
+    // "222"
+    // "000"
+    // "002"
+    // "001"
+    // "010"
+    // "020"
+    // "0202"
+    // "02012"
+    let s = "
         00000
+        00200
         00000
-        00000
-        22222";
-    mars(5, grid);
-
-    // val = 11; N = 324 cities
-    // 90000 9****
-    // 00000 0****
-    // 00000 0****
-    // 00000 0****
-    // 22222 2****
-
-    let grid = "
-        20000
-        20000
-        20000
-        20000
-        20009";
-    mars(5, grid);
-
-    // val = 11; N = 324 cities
-    // 20000 *****
-    // 20000 *****
-    // 20000 *****
-    // 20000 *****
-    // 20009 20009
+        02000
+        00012
+    ";
+    println!("{}", crate::coins::coins(s, (3, 3)));
 }
 
 pub mod mars {
@@ -268,3 +258,184 @@ pub mod mars {
         assert_eq!(mars(10, grid), 86);
     }
 }
+
+pub mod coins {
+    use std::collections::{HashMap, HashSet};
+
+    type Coord = (usize, usize);
+    type T = isize;
+    type Maze = HashMap<Coord, char>;
+
+    const START: Coord = (0, 0);
+    const WALL: char = '1';
+    const COIN: char = '2';
+
+    pub fn coins(s: &str, end: Coord) -> T {
+        if end == START {
+            panic!()
+        }
+
+        // parse input string into vec
+        let v: Vec<&str> = s
+            .lines()
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        // store maze as hashmap: (r, c) -> char
+        // store coin coords
+        let mut maze = HashMap::new();
+        let mut coins = Vec::new();
+        for (i, line) in v.iter().enumerate() {
+            for (j, ch) in line.chars().enumerate() {
+                let coord = (i, j);
+                if ch != WALL {
+                    maze.insert(coord, ch);
+                }
+                if ch == COIN && coord != end {
+                    coins.push(coord);
+                }
+            }
+        }
+
+        let mut no_path = false;
+
+        // coin graph helper function
+        let mut coin_graph = HashMap::new();
+        let mut insert = |start: Coord, end: Coord| {
+            let distance = bfs(&maze, start, end);
+            if distance == -1 {
+                no_path = true;
+            } else {
+                coin_graph.insert((start, end), distance);
+            }
+        };
+
+        // create coin graph: (coin a, coin b) -> distance
+        insert(START, end);
+        for &coord_a in coins.iter() {
+            // start -> coin
+            insert(START, coord_a);
+            // coin -> end
+            insert(end, coord_a);
+            // coin -> coin
+            for &coord_b in coins.iter().filter(|&&c| c != coord_a) {
+                insert(coord_a, coord_b);
+            }
+        }
+
+        // early return: can't reach coin or exit
+        if no_path {
+            return -1;
+        }
+
+        let dist = |start: Coord, end: Coord| {
+            coin_graph
+                .get(&(start, end))
+                .or_else(|| coin_graph.get(&(end, start)))
+                .unwrap()
+        };
+        let path_len = |coins: &[Coord]| -> T {
+            dist(START, coins[0])
+                + dist(coins[coins.len() - 1], end)
+                + coins
+                    .windows(2)
+                    .map(|w| match w {
+                        &[a, b] => dist(a, b),
+                        _ => panic!(),
+                    })
+                    .sum::<T>()
+        };
+
+        // early return: 0 or 1 coin
+        if coins.is_empty() {
+            return *dist(START, end);
+        } else if coins.len() == 1 {
+            return *dist(START, coins[0]) + *dist(coins[0], end);
+        }
+
+        let mut best = T::MAX;
+        let mut c = vec![0; coins.len()];
+        let mut i = 1;
+        while i < coins.len() {
+            let p = path_len(&coins);
+            if p < best {
+                best = p;
+            };
+            permute(&mut coins, &mut c, &mut i);
+        }
+
+        best
+    }
+
+    fn bfs(maze: &Maze, start: Coord, end: Coord) -> T {
+        if start == end {
+            return 0;
+        }
+
+        let mut paths = HashSet::from([start]);
+        let mut history = HashSet::new();
+        let mut path_len = 0;
+
+        let adj = |coord: Coord| {
+            let (r, c) = coord;
+            [(r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)]
+        };
+
+        loop {
+            let mut new_paths = HashSet::new();
+            let mut adjacent = paths
+                .iter()
+                .flat_map(|&coord| adj(coord))
+                .filter(|coord| !paths.contains(coord))
+                .filter(|coord| !history.contains(coord))
+                .filter(|coord| maze.get(coord).is_some())
+                .peekable();
+            if adjacent.peek().is_none() {
+                return -1;
+            }
+            path_len += 1;
+            for coord in adjacent {
+                if coord == end {
+                    return path_len;
+                }
+                new_paths.insert(coord);
+            }
+            history.extend(paths);
+            paths = new_paths;
+        }
+    }
+
+    // Heap's algorithm: https://en.wikipedia.org/wiki/Heap%27s_algorithm
+    fn permute(v: &mut [Coord], c: &mut [usize], i: &mut usize) {
+        while *i < v.len() && c[*i] >= *i {
+            c[*i] = 0;
+            *i += 1;
+        }
+        if *i >= v.len() {
+            return;
+        } else if *i % 2 == 0 {
+            v.swap(*i, 0);
+        } else {
+            v.swap(*i, c[*i]);
+        }
+        c[*i] += 1;
+        *i = 1;
+    }
+}
+
+// directions: N, S, E, W only
+// find shortest route
+// return LENGTH of shortest path, or -1 if NOT possible
+
+// n x m array
+// n, m <= 100
+// # coins: 0 <= n <= 10
+// values are 0, 1, or 2
+// coord = (row, col)
+
+// eg
+// 020
+// 122
+// 130
+// 100
