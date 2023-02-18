@@ -13,7 +13,8 @@ fn main() {
             return println!("File already exists: {path}");
         }
         let cookie =
-            env::var("aoc_session_cookie").expect("Missing cookie env var.");
+            env::var("aoc_session_cookie")
+            .expect("Missing aoc_session_cookie env var.");
         let url = format!("https://adventofcode.com/{year}/day/{day}/input");
         let curl = format!("curl -b session={cookie} {url} > {path}");
         Command::new("bash").arg("-c").arg(curl).output().unwrap();
