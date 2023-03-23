@@ -14,7 +14,7 @@ type T = usize;
 
 const PROCESS: &str = "TekkenGame-Win64-Shipping.exe";
 const TICK_IN_GAME: u64 = 1;
-const TICK_OUT_GAME: u64 = 1;
+const TICK_OUT_GAME: u64 = 10;
 
 const STAGE: T = 0x34df550;
 const TIMER: [T; 2] = [0x034D6660, 0x48]; // [034D5B88, 10, 98, 48]
