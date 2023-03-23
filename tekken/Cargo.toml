@@ -1,0 +1,18 @@
+[package]
+name = "tekken"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+path = "main.rs"
+name = "tekken"
+
+[dependencies]
+sysinfo = "*"
+memory-rs = "*"
+read-process-memory = "*"
+time = { version = "*", features = ["local-offset"] }
+
+[dependencies.windows-sys]
+version = "0.45.0"
+features = ["Win32_Foundation", "Win32_System_Diagnostics_ToolHelp"]
