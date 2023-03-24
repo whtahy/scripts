@@ -1,5 +1,5 @@
 use read_process_memory::{copy_address, ProcessHandle};
-use std::{fmt, thread, time::Duration};
+use std::{fmt, io::Write, thread, time::Duration};
 use sysinfo::{PidExt, ProcessExt, ProcessRefreshKind, System, SystemExt};
 use time::OffsetDateTime;
 use windows_sys::Win32::{
@@ -15,12 +15,12 @@ type T = usize;
 const PROCESS: &str = "TekkenGame-Win64-Shipping.exe";
 const TICK_IN_GAME: u64 = 1;
 const TICK_OUT_GAME: u64 = 10;
-
-const STAGE: T = 0x34df550;
-const TIMER: [T; 2] = [0x034D6660, 0x48]; // [034D5B88, 10, 98, 48]
 const DEBUG: [T; 3] = [0x34df554, 0x3524cfe, 0x3524dda];
 const SWAP_WINS: &[u8] = &[1, 2, 1];
 const SWAP_HP: &[u8] = &[0, 1, 2];
+
+const STAGE: T = 0x34df550;
+const TIMER: [T; 2] = [0x034D6660, 0x48]; // [034D5B88, 10, 98, 48]
 const P1_CHAR: T = 0x34f826c;
 const P2_CHAR: T = 0x34edf18;
 const P1_RANK: T = 0x34df54c;
@@ -55,12 +55,12 @@ struct MatchState {
 
 impl fmt::Display for MatchState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} vs {}", self.matchup.0, self.matchup.1)?;
-        write!(f, "\nRank: {}", self.rank)?;
-        write!(f, "\nScore: {} - {}", self.wins.0, self.wins.1)?;
-        write!(f, "\nHp: {} - {}", self.hp.0, self.hp.1)?;
-        write!(f, "\nTimer: {:?}", self.timer)?;
-        write!(f, "\nStage: {}", self.stage)
+        write!(f, "  {} vs {}", self.matchup.0, self.matchup.1)?;
+        write!(f, "\n  Rank: {}", self.rank)?;
+        write!(f, "\n  Score: {} - {}", self.wins.0, self.wins.1)?;
+        write!(f, "\n  Hp: {} - {}", self.hp.0, self.hp.1)?;
+        write!(f, "\n  Timer: {:?}", self.timer)?;
+        write!(f, "\n  Stage: {}", self.stage)
     }
 }
 
@@ -125,10 +125,27 @@ fn daemon() {
             game_state = Match;
             start = now();
         } else if game_state == Match && is_end(&match_state) {
-            println!("{match_state}");
-            println!("{}", datetime(start, now()));
             println!("--- Match end ---");
             game_state = GameOpen;
+            println!("{match_state}");
+            println!(
+                "{} {} {}",
+                date(start),
+                time(start),
+                duration(start, now())
+            );
+            log(format!(
+                "{},{},{},{},{},{},{},{},{}",
+                date(start),
+                time(start),
+                duration(start, now()),
+                match_state.stage,
+                match_state.matchup.0,
+                match_state.matchup.1,
+                match_state.wins.0,
+                match_state.wins.1,
+                match_state.rank,
+            ));
         } else {
             sleep(TICK_IN_GAME);
         }
@@ -151,7 +168,6 @@ fn match_state(pid: u32) -> Option<MatchState> {
         let val = u32::from_le_bytes(bytes);
         Some(val as T)
     };
-
     let ptr_chain = |offsets: &[T]| {
         let mut iter = offsets.iter();
         let offset = *iter.next()?;
@@ -162,6 +178,13 @@ fn match_state(pid: u32) -> Option<MatchState> {
         }
         Some(new_val)
     };
+
+    // if rel(RANKED, 21)? != RANKED_STRING {
+    //     println!("NOT ranked");
+    //     // return None;
+    // } else {
+    //     println!("YES ranked");
+    // }
 
     let timer = ptr_chain(&TIMER)?;
     let stage = stage(rel_4(STAGE)?);
@@ -207,11 +230,25 @@ fn check_pid(sysinfo: &System) -> Option<u32> {
     Some(pid)
 }
 
-fn datetime(start: OffsetDateTime, end: OffsetDateTime) -> String {
-    let hh_mm =
-        |t: OffsetDateTime| format!("{:02}:{:02}", t.hour(), t.minute());
+fn log(row: String) {
+    let mut file = std::fs::OpenOptions::new()
+        .append(true)
+        .open("./log.txt")
+        .unwrap();
+    writeln!(file, "{}", row).ok();
+}
+
+fn date(t: OffsetDateTime) -> String {
+    t.date().to_string()
+}
+
+fn time(t: OffsetDateTime) -> String {
+    format!("{:02}:{:02}", t.hour(), t.minute())
+}
+
+fn duration(start: OffsetDateTime, end: OffsetDateTime) -> String {
     let t = (end - start).whole_seconds();
-    format!("{} {}, {}m {}s", start.date(), hh_mm(start), t / 60, t % 60)
+    format!("{}m {}s", t / 60, t % 60)
 }
 
 fn is_start(state: &MatchState) -> bool {
