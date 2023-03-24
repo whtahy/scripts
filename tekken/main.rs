@@ -18,20 +18,23 @@ const TICK_OUT_GAME: u64 = 10;
 const DEBUG: [T; 3] = [0x34df554, 0x3524cfe, 0x3524dda];
 const SWAP_WINS: &[u8] = &[1, 2, 1];
 const SWAP_HP: &[u8] = &[0, 1, 2];
+const RANKED_STRING: [u8; 21] = [
+    // <#menu> Cancel Search
+    0x3C, 0x23, 0x6D, 0x65, 0x6E, 0x75, 0x3E, 0x20, 0x43, 0x61, 0x6E, 0x63,
+    0x65, 0x6C, 0x20, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68,
+];
 
-const STAGE: T = 0x34df550;
+const RANKED: T = 0x34D5DD0;
+const STAGE: T = 0x34df550; // 0x34df550 0x34e9800
 const TIMER: [T; 2] = [0x034D6660, 0x48]; // [034D5B88, 10, 98, 48]
-const P1_CHAR: T = 0x34f826c;
-const P2_CHAR: T = 0x34edf18;
 const P1_RANK: T = 0x34df54c;
 // const P2_RANK: T = ?;
+const P1_CHAR: T = 0x34f826c; // 0x34ea8a8 0x34ea8ac 0x34f8268 0x34f826c
+const P2_CHAR: T = 0x34edf18; // 0x34edf18 0x34edf1c 0x34fb8d8 0x34fb8dc
 const P1_WINS: T = 0x34cd500;
 const P2_WINS: T = 0x34cd5f0;
 const P1_HP: T = 0x34ef348;
 const P2_HP: T = 0x34ebcd8;
-// stage: 0x34df550 0x34e9800
-// p1_char: 0x34ea8a8 0x34ea8ac 0x34f8268 0x34f826c
-// p2_char: 0x34edf18 0x34edf1c 0x34fb8d8 0x34fb8dc
 
 use crate::GameState::*;
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -65,10 +68,7 @@ impl fmt::Display for MatchState {
 }
 
 // TODO
-// ranked vs replay detection
-// rematch detection using warmup stage + enemy name
 // move daemon to background thread -> debug cli?
-// write data to log? per round, etc
 // gui -> html?
 
 fn main() {
@@ -179,12 +179,9 @@ fn match_state(pid: u32) -> Option<MatchState> {
         Some(new_val)
     };
 
-    // if rel(RANKED, 21)? != RANKED_STRING {
-    //     println!("NOT ranked");
-    //     // return None;
-    // } else {
-    //     println!("YES ranked");
-    // }
+    if rel(RANKED, RANKED_STRING.len())? != RANKED_STRING {
+        return None;
+    }
 
     let timer = ptr_chain(&TIMER)?;
     let stage = stage(rel_4(STAGE)?);
