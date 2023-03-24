@@ -1,3 +1,4 @@
+use crate::GameState::*;
 use read_process_memory::{copy_address, ProcessHandle};
 use std::{fmt, io::Write, thread, time::Duration};
 use sysinfo::{PidExt, ProcessExt, ProcessRefreshKind, System, SystemExt};
@@ -13,30 +14,28 @@ use windows_sys::Win32::{
 type T = usize;
 
 const PROCESS: &str = "TekkenGame-Win64-Shipping.exe";
+const DEBUG: [T; 3] = [0x34df554, 0x3524cfe, 0x3524dda];
+const LOG: &str = "./log.txt";
+const RANKED_START: &str = "enu> Cancel Search";
+const RANKED_END: &str = "<#rb> Add to Favor";
+const SWAP_HP: &[u8] = &[0, 1, 2];
+const SWAP_WINS: &[u8] = &[1, 2, 1];
 const TICK_IN_GAME: u64 = 1;
 const TICK_OUT_GAME: u64 = 10;
-const DEBUG: [T; 3] = [0x34df554, 0x3524cfe, 0x3524dda];
-const SWAP_WINS: &[u8] = &[1, 2, 1];
-const SWAP_HP: &[u8] = &[0, 1, 2];
-const RANKED_STRING: [u8; 21] = [
-    // <#menu> Cancel Search
-    0x3C, 0x23, 0x6D, 0x65, 0x6E, 0x75, 0x3E, 0x20, 0x43, 0x61, 0x6E, 0x63,
-    0x65, 0x6C, 0x20, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68,
-];
 
-const RANKED: T = 0x34D5DD0;
+const RANK_MODE: T = 0x34d5dd3;
 const STAGE: T = 0x34df550; // 0x34df550 0x34e9800
-const TIMER: [T; 2] = [0x034D6660, 0x48]; // [034D5B88, 10, 98, 48]
-const P1_RANK: T = 0x34df54c;
-// const P2_RANK: T = ?;
+const TIMER: [T; 2] = [0x034d6660, 0x48]; // [034D5B88, 10, 98, 48]
 const P1_CHAR: T = 0x34f826c; // 0x34ea8a8 0x34ea8ac 0x34f8268 0x34f826c
 const P2_CHAR: T = 0x34edf18; // 0x34edf18 0x34edf1c 0x34fb8d8 0x34fb8dc
+const P1_RANK: T = 0x34df54c;
+// const P2_RANK: T = ?;
+const P2_NAME: [T; 4] = [0x034d55a0, 0x0, 0x8, 0x11c];
 const P1_WINS: T = 0x34cd500;
 const P2_WINS: T = 0x34cd5f0;
 const P1_HP: T = 0x34ef348;
 const P2_HP: T = 0x34ebcd8;
 
-use crate::GameState::*;
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum GameState {
     WaitingForProcess,
@@ -49,28 +48,29 @@ enum GameState {
 #[derive(Debug, PartialEq, Eq)]
 struct MatchState {
     matchup: (String, String),
-    rank: String,
+    p1_rank: String,
     wins: (T, T),
     hp: (T, T),
     timer: T,
     stage: String,
+    p2_name: String,
 }
 
 impl fmt::Display for MatchState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "  {} vs {}", self.matchup.0, self.matchup.1)?;
-        write!(f, "\n  Rank: {}", self.rank)?;
-        write!(f, "\n  Score: {} - {}", self.wins.0, self.wins.1)?;
-        write!(f, "\n  Hp: {} - {}", self.hp.0, self.hp.1)?;
-        write!(f, "\n  Timer: {:?}", self.timer)?;
-        write!(f, "\n  Stage: {}", self.stage)
+        write!(f, "\n Rank: {}", self.p1_rank)?;
+        write!(f, "\n Score: {} - {}", self.wins.0, self.wins.1)?;
+        write!(f, "\n P2 name: {}", self.p2_name)?;
+        write!(f, "\n Hp: {} - {}", self.hp.0, self.hp.1)?;
+        write!(f, "\n Timer: {:?}", self.timer)?;
+        write!(f, "\n Stage: {}", self.stage)
     }
 }
 
 // TODO
 // move daemon to background thread -> debug cli?
 // gui -> html?
-
 fn main() {
     daemon();
 }
@@ -84,7 +84,7 @@ fn daemon() {
         sysinfo.refresh_processes_specifics(refresh);
         let pid = match (check_pid(&sysinfo), game_state) {
             (Some(p), GameClosed | WaitingForProcess) => {
-                println!("+++ Game opened +++");
+                println!("+++ Game open +++");
                 game_state = GameOpen;
                 p
             }
@@ -107,6 +107,11 @@ fn daemon() {
             }
         };
         let match_state = match (match_state(pid), game_state) {
+            (Some(s), GameOpen) => {
+                println!("... Waiting for match ...");
+                game_state = WaitingForMatch;
+                s
+            }
             (Some(s), _) => s,
             (None, GameOpen | Match) => {
                 println!("... Waiting for match ...");
@@ -120,11 +125,11 @@ fn daemon() {
             }
         };
         let now = || OffsetDateTime::now_local().unwrap();
-        if game_state == WaitingForMatch && is_start(&match_state) {
+        if game_state == WaitingForMatch && match_start(&match_state) {
             println!("--- Match start ---");
             game_state = Match;
             start = now();
-        } else if game_state == Match && is_end(&match_state) {
+        } else if game_state == Match && match_end(&match_state) {
             println!("--- Match end ---");
             game_state = GameOpen;
             println!("{match_state}");
@@ -135,16 +140,17 @@ fn daemon() {
                 duration(start, now())
             );
             log(format!(
-                "{},{},{},{},{},{},{},{},{}",
+                "{},{},{},{},{},{},{},{},{},{}",
                 date(start),
                 time(start),
                 duration(start, now()),
-                match_state.stage,
+                match_state.p1_rank,
                 match_state.matchup.0,
                 match_state.matchup.1,
                 match_state.wins.0,
                 match_state.wins.1,
-                match_state.rank,
+                match_state.stage,
+                match_state.p2_name,
             ));
         } else {
             sleep(TICK_IN_GAME);
@@ -168,22 +174,34 @@ fn match_state(pid: u32) -> Option<MatchState> {
         let val = u32::from_le_bytes(bytes);
         Some(val as T)
     };
-    let ptr_chain = |offsets: &[T]| {
-        let mut iter = offsets.iter();
+    let ptr_chain = |offsets: &[T], n_bytes| {
+        let mut iter = offsets.iter().peekable();
         let offset = *iter.next()?;
-        let mut new_val = rel_4(offset)?;
-        for offset in iter {
-            new_val += offset;
-            new_val = abs_4(new_val)?;
+        let mut ptr = rel_4(offset)?;
+        while let Some(offset) = iter.next() {
+            ptr += offset;
+            match iter.peek() {
+                Some(_) => ptr = abs_4(ptr)?,
+                None => return copy_address(ptr, n_bytes, &handle).ok(),
+            };
         }
-        Some(new_val)
+        None
     };
 
-    if rel(RANKED, RANKED_STRING.len())? != RANKED_STRING {
+    let mode = String::from_utf8(rel(RANK_MODE, RANKED_START.len())?).ok()?;
+    if mode != RANKED_START && mode != RANKED_END {
         return None;
     }
 
-    let timer = ptr_chain(&TIMER)?;
+    let p2_name = String::from_utf8(
+        ptr_chain(&P2_NAME, 32)?
+            .into_iter()
+            .filter(|&x| x != 0)
+            .collect(),
+    )
+    .ok()?;
+    let timer = ptr_chain(&TIMER, 1)?[0] as T;
+
     let stage = stage(rel_4(STAGE)?);
     let rank = rank(rel_4(P1_RANK)?);
     let mut p1_char = character(rel_4(P1_CHAR)?);
@@ -210,11 +228,12 @@ fn match_state(pid: u32) -> Option<MatchState> {
 
     Some(MatchState {
         matchup: (p1_char, p2_char),
-        rank,
+        p1_rank: rank,
         wins: (p1_wins, p2_wins),
         hp: (p1_hp, p2_hp),
-        stage,
         timer,
+        stage,
+        p2_name,
     })
 }
 
@@ -228,10 +247,7 @@ fn check_pid(sysinfo: &System) -> Option<u32> {
 }
 
 fn log(row: String) {
-    let mut file = std::fs::OpenOptions::new()
-        .append(true)
-        .open("./log.txt")
-        .unwrap();
+    let mut file = std::fs::OpenOptions::new().append(true).open(LOG).unwrap();
     writeln!(file, "{}", row).ok();
 }
 
@@ -248,14 +264,14 @@ fn duration(start: OffsetDateTime, end: OffsetDateTime) -> String {
     format!("{}m {}s", t / 60, t % 60)
 }
 
-fn is_start(state: &MatchState) -> bool {
+fn match_start(state: &MatchState) -> bool {
     state.timer == 60
         && state.wins == (0, 0)
         && state.hp == (100, 100)
         && state.stage != "Warmup"
 }
 
-fn is_end(state: &MatchState) -> bool {
+fn match_end(state: &MatchState) -> bool {
     (state.wins.0 == 3 && state.hp.1 == 0)
         || (state.wins.1 == 3 && state.hp.0 == 0)
 }

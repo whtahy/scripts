@@ -1,1 +1,17 @@
-date,time,duration,stage,p1,p2,p1_wins,p2_wins,p1_rank
+date,time,duration,p1_rank,p1,p2,p1_wins,p2_wins,stage,p2_name
+2023-03-24,00:01,2m 3s,Blue/Teal: Initiate,Asuka,Alisa,1,3,Dragon's Nest,FedoraFan77
+2023-03-24,00:03,3m 17s,Silver: 3rd Dan,Asuka,Alisa,3,1,Dragon's Nest,FedoraFan77
+2023-03-24,00:08,2m 36s,Silver: 3rd Dan,Asuka,Katarina,1,3,Brimstone & Fire,Blacktail9922
+2023-03-24,00:11,2m 12s,Silver: 3rd Dan,Asuka,Katarina,1,3,Brimstone & Fire,Blacktail9922
+2023-03-24,00:14,3m 28s,Silver: 2nd Dan,Asuka,Lee,1,3,Kinder Gym,humzaKun
+2023-03-24,00:20,2m 49s,Silver: 2nd Dan,Asuka,Hwoarang,2,3,G Corp Helipad (Day),dbz
+2023-03-24,00:23,2m 30s,Silver: 2nd Dan,Asuka,Hwoarang,1,3,G Corp Helipad (Day),dbz
+2023-03-24,00:26,3m 19s,Silver: 2nd Dan,Asuka,Hwoarang,3,2,G Corp Helipad (Day),dbz
+2023-03-24,00:30,2m 28s,Silver: 2nd Dan,Asuka,Hwoarang,3,1,G Corp Helipad (Day),dbz
+2023-03-24,00:33,2m 21s,Silver: 2nd Dan,Asuka,Hwoarang,1,3,G Corp Helipad (Day),dbz
+2023-03-24,00:36,1m 33s,Silver: 2nd Dan,Asuka,Hwoarang,0,3,G Corp Helipad (Day),dbz
+2023-03-24,00:38,1m 51s,Silver: 2nd Dan,Asuka,Hwoarang,2,3,G Corp Helipad (Day),dbz
+2023-03-24,00:42,2m 35s,Silver: 2nd Dan,Asuka,Kunimitsu,1,3,G Corp Helipad (Day),JetKuro
+2023-03-24,00:45,2m 26s,Silver: 1st Dan,Asuka,Kunimitsu,3,1,G Corp Helipad (Day),JetKuro
+2023-03-24,00:47,1m 21s,Silver: 2nd Dan,Asuka,Kunimitsu,3,0,G Corp Helipad (Day),JetKuro
+2023-03-24,00:50,1m 33s,Silver: 2nd Dan,Asuka,Jack-7,0,3,Duomo Di Sirio,OniiZilla
