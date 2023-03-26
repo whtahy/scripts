@@ -58,7 +58,7 @@ struct MatchState {
 
 impl fmt::Display for MatchState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "  {} vs {}", self.matchup.0, self.matchup.1)?;
+        write!(f, " {} vs {}", self.matchup.0, self.matchup.1)?;
         write!(f, "\n Rank: {}", self.p1_rank)?;
         write!(f, "\n Score: {} - {}", self.wins.0, self.wins.1)?;
         write!(f, "\n P2 name: {}", self.p2_name)?;
@@ -422,12 +422,12 @@ fn stage(id: T) -> String {
         40 => "Infinite Azure",
         55 => "Infinite Azure 2",
         // DLC
+        56 => "Last Day on Earth",
+        59 => "Island Paradise",
         // ? => "Howard Estate",
         // ? => "Hammerhead",
-        // ? => "Last Day on Earth",
         // ? => "Cave of Enlightenment",
         // ? => "Vermilion Gates",
-        // ? => "Island Paradise",
         _ => return format!("Unknown stage id = {}", id),
     }
     .to_string()
