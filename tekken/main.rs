@@ -64,9 +64,6 @@ impl fmt::Display for MatchState {
     }
 }
 
-// TODO
-// move daemon to background thread -> debug cli?
-// gui -> html?
 fn main() {
     daemon();
 }
