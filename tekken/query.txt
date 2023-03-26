@@ -1,0 +1,13 @@
+duckdb -c "
+    select
+        p2,
+        count(distinct p2_name) as n,
+        count(distinct case when p1_wins > p2_wins then p2_name end) as wins,
+        count(distinct case when p1_wins < p2_wins then p2_name end) as losses,
+        count(*) as total_n,
+        sum(case when p1_wins > p2_wins then 1 end) as total_wins,
+        sum(case when p1_wins < p2_wins then 1 end) as total_losses
+    from read_csv_auto('log.txt')
+    group by p2
+    order by n desc
+"
