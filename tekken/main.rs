@@ -24,17 +24,13 @@ const TICK_IN_GAME: u64 = 1;
 const TICK_OUT_GAME: u64 = 10;
 
 const RANK_MODE: T = 0x34d5dd3;
-const STAGE: T = 0x34df550; // 0x34df550 0x34e9800
-const TIMER: [T; 2] = [0x034d6660, 0x48]; // [034D5B88, 10, 98, 48]
-const P1_CHAR: T = 0x34f826c; // 0x34ea8a8 0x34ea8ac 0x34f8268 0x34f826c
-const P2_CHAR: T = 0x34edf18; // 0x34edf18 0x34edf1c 0x34fb8d8 0x34fb8dc
-const P1_RANK: T = 0x34df54c;
-// const P2_RANK: T = ?;
+const STAGE: T = 0x34df550;
+const TIMER: [T; 2] = [0x034d6660, 0x48];
+const P1_RANK: T = 0x34df54c; // P2_RANK = ?;
 const P2_NAME: [T; 4] = [0x034d55a0, 0x0, 0x8, 0x11c];
-const P1_WINS: T = 0x34cd500;
-const P2_WINS: T = 0x34cd5f0;
-const P1_HP: T = 0x34ef348;
-const P2_HP: T = 0x34ebcd8;
+const CHARACTER: [T; 2] = [0x34f826c, 0x34edf18];
+const ROUND_WINS: [T; 2] = [0x34cd500, 0x34cd5f0];
+const HP: [T; 2] = [0x34ef348, 0x34ebcd8];
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum GameState {
@@ -79,6 +75,7 @@ fn daemon() {
     let mut sysinfo = System::new();
     let refresh = ProcessRefreshKind::new();
     let mut start = OffsetDateTime::now_local().unwrap();
+    let now = || OffsetDateTime::now_local().unwrap();
     let mut game_state = GameClosed;
     loop {
         sysinfo.refresh_processes_specifics(refresh);
@@ -124,7 +121,6 @@ fn daemon() {
                 continue;
             }
         };
-        let now = || OffsetDateTime::now_local().unwrap();
         if game_state == WaitingForMatch && match_start(&match_state) {
             println!("--- Match start ---");
             game_state = Match;
@@ -134,7 +130,7 @@ fn daemon() {
             game_state = GameOpen;
             println!("{match_state}");
             println!(
-                "{} {} {}",
+                " {} {} {}",
                 date(start),
                 time(start),
                 duration(start, now())
@@ -160,19 +156,17 @@ fn daemon() {
 
 fn match_state(pid: u32) -> Option<MatchState> {
     let handle = ProcessHandle::try_from(pid).ok()?;
+    let base = base_address(pid);
     let rel = |offset: T, n_bytes: T| {
-        copy_address(base_address(pid) + offset, n_bytes, &handle).ok()
+        copy_address(base + offset, n_bytes, &handle).ok()
     };
     let rel_4 = |offset| {
         let bytes = rel(offset, 4)?.try_into().ok()?;
-        let val = u32::from_le_bytes(bytes);
-        Some(val as T)
+        Some(u32::from_le_bytes(bytes) as T)
     };
-    let abs = |addr: T| copy_address(addr, 4, &handle).ok();
     let abs_4 = |addr: T| {
-        let bytes = abs(addr)?.try_into().ok()?;
-        let val = u32::from_le_bytes(bytes);
-        Some(val as T)
+        let bytes = copy_address(addr, 4, &handle).ok()?.try_into().ok()?;
+        Some(u32::from_le_bytes(bytes) as T)
     };
     let ptr_chain = |offsets: &[T], n_bytes| {
         let mut iter = offsets.iter().peekable();
@@ -192,29 +186,17 @@ fn match_state(pid: u32) -> Option<MatchState> {
     if mode != RANKED_START && mode != RANKED_END {
         return None;
     }
-
-    let p2_name = String::from_utf8(
-        ptr_chain(&P2_NAME, 32)?
-            .into_iter()
-            .filter(|&x| x != 0)
-            .collect(),
-    )
-    .ok()?;
-    let timer = ptr_chain(&TIMER, 1)?[0] as T;
-
-    let stage = stage(rel_4(STAGE)?);
-    let rank = rank(rel_4(P1_RANK)?);
-    let mut p1_char = character(rel_4(P1_CHAR)?);
-    let mut p2_char = character(rel_4(P2_CHAR)?);
-    let mut p1_wins = rel_4(P1_WINS)?;
-    let mut p2_wins = rel_4(P2_WINS)?;
-    let mut p1_hp = rel_4(P1_HP)?;
-    let mut p2_hp = rel_4(P2_HP)?;
+    let p2 = ptr_chain(&P2_NAME, 32)?
+        .into_iter()
+        .filter(|&x| x != 0)
+        .collect();
+    let [mut p1_char, mut p2_char] = CHARACTER.map(rel_4).map(character);
+    let [mut p1_wins, mut p2_wins] = ROUND_WINS.map(rel_4);
+    let [mut p1_hp, mut p2_hp] = HP.map(rel_4);
 
     let rel_1 = |offset: &T| {
         let bytes = rel(*offset, 1)?.try_into().ok()?;
-        let val = u8::from_le_bytes(bytes);
-        Some(val)
+        Some(u8::from_le_bytes(bytes))
     };
     let debug = DEBUG.iter().flat_map(rel_1).collect::<Vec<_>>();
     match &debug[..] {
@@ -227,13 +209,13 @@ fn match_state(pid: u32) -> Option<MatchState> {
     }
 
     Some(MatchState {
-        matchup: (p1_char, p2_char),
-        p1_rank: rank,
-        wins: (p1_wins, p2_wins),
-        hp: (p1_hp, p2_hp),
-        timer,
-        stage,
-        p2_name,
+        matchup: (p1_char?, p2_char?),
+        p1_rank: rank(rel_4(P1_RANK)?),
+        wins: (p1_wins?, p2_wins?),
+        hp: (p1_hp?, p2_hp?),
+        timer: ptr_chain(&TIMER, 1)?[0] as T,
+        stage: stage(rel_4(STAGE)?),
+        p2_name: String::from_utf8(p2).ok()?,
     })
 }
 
@@ -280,8 +262,8 @@ fn sleep(secs: u64) {
     thread::sleep(Duration::from_secs(secs));
 }
 
-fn character(id: T) -> String {
-    match id {
+fn character(id: Option<T>) -> Option<String> {
+    let char = match id? {
         0 => "Paul",
         1 => "Law",
         2 => "King",
@@ -333,9 +315,10 @@ fn character(id: T) -> String {
         54 => "Fahkumram",
         55 => "Kunimitsu",
         56 => "Lidia",
-        _ => return format!("Unknown character id = {}", id),
+        _ => return Some(format!("Unknown character id = {}", id.unwrap())),
     }
-    .to_string()
+    .to_string();
+    Some(char)
 }
 
 fn rank(id: T) -> String {
