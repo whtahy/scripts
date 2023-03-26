@@ -7,4 +7,7 @@
 !*.md
 !*.txt
 !*.rs
-!cargo.toml
+!*.toml
+
+# tekken
+tekken/log.txt
