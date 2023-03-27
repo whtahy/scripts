@@ -28,7 +28,7 @@ const STAGE: T = 0x34df550;
 const TIMER: [T; 2] = [0x034d6660, 0x48];
 const P1_RANK: T = 0x34df54c; // P2_RANK = ?;
 const P2_NAME: [T; 4] = [0x034d55a0, 0x0, 0x8, 0x11c];
-const CHARACTER: [T; 2] = [0x34f826c, 0x34edf18];
+const CHARACTER: [T; 2] = [0x34f826c, 0x34edf1c]; // [0x34ea8ac, 0x34fb8dc]
 const ROUND_WINS: [T; 2] = [0x34cd500, 0x34cd5f0];
 const HP: [T; 2] = [0x34ef348, 0x34ebcd8];
 
