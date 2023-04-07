@@ -10,4 +10,5 @@ duckdb -c "
     from read_csv_auto('log.txt')
     group by p2
     order by n desc
+    limit 40
 "
