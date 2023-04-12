@@ -404,8 +404,8 @@ fn stage(id: T) -> String {
         // DLC
         56 => "Last Day on Earth",
         59 => "Island Paradise",
-        // ? => "Howard Estate",
-        // ? => "Hammerhead",
+        51 => "Howard Estate",
+        52 => "Hammerhead",
         // ? => "Cave of Enlightenment",
         // ? => "Vermilion Gates",
         _ => return format!("Unknown stage id = {}", id),
