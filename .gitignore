@@ -8,6 +8,3 @@
 !*.txt
 !*.rs
 !*.toml
-
-# tekken
-tekken/log.txt
