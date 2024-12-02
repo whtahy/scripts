@@ -22,7 +22,7 @@ fn main() {
             let puzzle = fs::read_to_string(&path).unwrap();
             if puzzle.trim() == INVALID_COOKIE {
                 fs::remove_file(path).ok();
-                return println!("Invalid cookie!");
+                return println!("Invalid cookie: {cookie}");
             }
             let crlf = puzzle.replace("\r\n", "\n").replace('\n', "\r\n");
             fs::write(&path, crlf).unwrap();
